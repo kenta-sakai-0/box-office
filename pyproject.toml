@@ -24,6 +24,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 force-include = { "pyproject.toml" = "pyproject.toml" }
+include = ["src/box_office/config.yaml"]
 
 [tool.dg]
 directory_type = "project"

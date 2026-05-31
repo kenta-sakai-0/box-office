@@ -1,0 +1,42 @@
+common: &common
+  catalog: catalog
+  
+franchises: &franchises
+  franchises_snapshot_savepath: '/Volumes/{catalog}/landing/franchises/{run_id}.parquet'
+
+theaters: &theaters
+  theaters_snapshot_location: '/Volumes/{catalog}/landing/theaters/{run_id}.parquet'
+
+showtimes: &showtimes
+  showtimes_snapshot_folderpath: '/Volumes/fandango_dev/landing/showtimes/{run_id}'
+ 
+  numNodes: 85 # Num nodes to run in parallel
+  chunkSize: 750 # Num pages to scrape before flushing to Databricks
+  timeout: 10 # in seconds
+  maxRequestsFailedInRow: 3 # number of requests allowed to fail in a row before declaring proxy dead and rotating
+  nDaysFromToday: 30
+
+seatmaps: &seatmaps
+  seatmaps_snapshot_folderpath: '/Volumes/fandango_dev/landing/seatmaps/{run_id}'
+ 
+  numNodes: 85 # Num nodes to run in parallel
+  chunkSize: 750 # Num pages to scrape before flushing to Databricks
+  timeout: 10 # in seconds
+  maxRequestsFailedInRow: 3 # number of requests allowed to fail in a row before declaring proxy dead and rotating
+  nDaysFromToday: 30
+
+
+default: &default
+  <<: *common 
+  franchises:
+    <<: *franchises
+  theaters:
+    <<: *theaters
+  showtimes:
+    <<: *showtimes
+  seatmaps:
+    <<: *seatmaps
+
+dev:
+  catalog: fandango_dev
+  <<: *default

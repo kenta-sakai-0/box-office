@@ -7,14 +7,16 @@ import polars as pl
 from datetime import datetime, timezone
 import yaml
 import os
-from pathlib import Path
+from importlib.resources import files
 
 env = os.getenv("DAGSTER_ENV")
-with open(f'{Path(__file__).parent.joinpath("config.yaml")}', 'r') as file:
-    config = yaml.safe_load(file).get(env)
 
+config_path = files("box_office") / "config.yaml"
+with open(config_path, 'r') as file:
+    config = yaml.safe_load(file).get(env)
 catalog = config.get('catalog')
 
+theaters_config = config.get('theaters')
 
 @dg.asset(deps=['franchises'])
 async def theaters_snapshot(context, databricks: DatabricksResource) -> str:
@@ -89,7 +91,7 @@ def scrape_theaters(franchises: pl.DataFrame) -> pl.DataFrame:
     return df
 
 async def upload_theaters_snapshot(run_id: str, df: pl.DataFrame, databricks: DatabricksResource) -> None:
-    theaters_snapshot_location = config.get('theaters_snapshot_location').format(
+    theaters_snapshot_location = theaters_config.get('theaters_snapshot_location').format(
         catalog=catalog,
         run_id=run_id
         )
@@ -102,7 +104,7 @@ async def upload_theaters_snapshot(run_id: str, df: pl.DataFrame, databricks: Da
     )
 
 def refresh_theaters(run_id: str, catalog: str, databricks: DatabricksResource) -> None:
-    theaters_snapshot_location = config.get('theaters_snapshot_location').format(
+    theaters_snapshot_location = theaters_config.get('theaters_snapshot_location').format(
         catalog=catalog,
         run_id=run_id
         )

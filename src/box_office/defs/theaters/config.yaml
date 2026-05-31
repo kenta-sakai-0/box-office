@@ -1,7 +1,0 @@
-common: &common
-  theaters_snapshot_location: '/Volumes/{catalog}/landing/theaters/{run_id}.parquet'
-  catalog: catalog
-
-dev:
-  <<: *common
-  catalog: fandango_dev

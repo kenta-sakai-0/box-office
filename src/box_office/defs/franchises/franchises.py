@@ -7,17 +7,19 @@ from datetime import datetime, timezone
 from box_office.resources.databricks.Databricks import DatabricksResource
 import yaml
 import os
-from pathlib import Path
+from importlib.resources import files
 
 env = os.getenv("DAGSTER_ENV")
-with open(f'{Path(__file__).parent.joinpath("config.yaml")}', 'r') as file:
+
+config_path = files("box_office") / "config.yaml"
+with open(config_path, 'r') as file:
     config = yaml.safe_load(file).get(env)
 
 catalog = config.get('catalog')
-
+franchises_config = config.get('franchises')
 
 @dg.asset
-async def franchises_snapshot(databricks: DatabricksResource) -> str:
+async def franchises_snapshot(context, databricks: DatabricksResource) -> str:
     """
         Takes snapshot of https://www.fandango.com/movie-theaters and make it available as flat file
 
@@ -65,27 +67,30 @@ def scrape_franchises() -> pl.DataFrame:
     )
     return df
 
-async def upload_franchises_snapshot(run_id, df: pl.DataFrame, databricks:DatabricksResource) -> None:
-    franchises_snapshot_location = config.get('franchises_snapshot_location').format(
+def franchises_snapshot_savepath(catalog, run_id):
+    return franchises_config.get('franchises_snapshot_savepath').format(
         catalog=catalog,
         run_id=run_id
         )
+
+async def upload_franchises_snapshot(run_id, df: pl.DataFrame, databricks:DatabricksResource) -> None:
+    savepath = franchises_snapshot_savepath(catalog=catalog,run_id=run_id)
     
     await databricks.upload_polars(
         df = df,
         astype='parquet',
-        targetPath=franchises_snapshot_location,
+        targetPath=savepath,
         overwrite=True
     )
 
 def refresh_franchises(run_id, catalog:str, databricks:DatabricksResource) -> pl.DataFrame:
-    franchises_snapshot_location = config.get('franchises_snapshot_location').format(
+    franchises_snapshot_savepath = franchises_config.get('franchises_snapshot_savepath').format(
         catalog=catalog,
         run_id=run_id
         )
     q = f"""
         CREATE OR REPLACE TABLE {catalog}.base.franchises AS
-        SELECT * FROM read_files('{franchises_snapshot_location}')
+        SELECT * FROM read_files('{franchises_snapshot_savepath}')
     """
     
     databricks.submit_query(q)
