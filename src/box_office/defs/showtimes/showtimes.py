@@ -1,13 +1,12 @@
 import dagster as dg
-from curl_cffi.requests import AsyncSession
 from datetime import datetime, timedelta
 import asyncio
-import numpy as np
-from dataclasses import dataclass
 import yaml
 import os
-import uuid
+from pathlib import Path
+
 from importlib.resources import files
+import papermill
 
 from box_office.resources.common.proxies import ProxyResource, ProxyClient, Proxy
 from box_office.resources.databricks.Databricks import DatabricksResource
@@ -30,6 +29,9 @@ nDaysFromToday = showtimes_config.get('nDaysFromToday')
 
 startDate = datetime.today()
 endDate = startDate + timedelta(days=nDaysFromToday)
+
+class ShowtimesConfig(dg.Config):
+    run_id: str | None = None
 
 @dg.asset(deps=['theaters'])
 def showtimes_raw(context: dg.AssetExecutionContext, databricks: DatabricksResource, proxy: dg.ResourceParam[ProxyClient]):
@@ -80,9 +82,23 @@ def showtimes_raw(context: dg.AssetExecutionContext, databricks: DatabricksResou
             for node in nodes])
  
     asyncio.run(_run())
+    
+    return run_id
+
+@dg.asset()
+def showtimes(context: dg.AssetExecutionContext, config: ShowtimesConfig, showtimes_raw):
+    run_id = config.run_id or showtimes_raw
+    papermill.execute_notebook(
+        input_path=showtimes_notebook_filepath(),
+        output_path=None,
+        parameters={'run_id': run_id, 'env': env}
+    )
 
 def showtimes_snapshot_folderpath(run_id)-> str:
     return showtimes_config.get('showtimes_snapshot_folderpath').format(run_id=run_id)
+
+def showtimes_notebook_filepath() -> str:
+    return Path(__file__).parent.joinpath('data_cleaning', 'showtimes.ipynb')
 
 def headers(theater_id: str, date: datetime) -> dict:
     date = date.strftime('%Y-%m-%d')

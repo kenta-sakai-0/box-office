@@ -9,7 +9,7 @@ theaters: &theaters
 
 showtimes: &showtimes
   showtimes_snapshot_folderpath: '/Volumes/fandango_dev/landing/showtimes/{run_id}'
- 
+
   numNodes: 85 # Num nodes to run in parallel
   chunkSize: 750 # Num pages to scrape before flushing to Databricks
   timeout: 10 # in seconds

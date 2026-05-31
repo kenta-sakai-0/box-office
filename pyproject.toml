@@ -1,13 +1,16 @@
 [project]
 name = "box_office"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.12,<3.13"
 version = "0.1.0"
 dependencies = [
     "beautifulsoup4>=4.14.3",
     "curl-cffi>=0.15.0",
     "dagster==1.13.3",
     "dagster-duckdb",
+    "databricks-connect==18.1",
+    "ipykernel>=7.2.0",
     "numpy>=2.2.6",
+    "papermill>=2.7.0",
     "polars>=1.40.1",
     "pyarrow>=24.0.0",
 ]
