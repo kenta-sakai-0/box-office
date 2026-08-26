@@ -76,7 +76,6 @@ def showtimes_raw(context: dg.AssetExecutionContext, databricks: DatabricksResou
             node.run(
                 maxRequestsFailedInRow=maxRequestsFailedInRow,
                 chunkSize=chunkSize,
-                timeout=timeout,
                 file_destination= showtimes_snapshot_folderpath(run_id=run_id)
             )
             for node in nodes])
@@ -95,7 +94,7 @@ def showtimes(context: dg.AssetExecutionContext, config: ShowtimesConfig, showti
     )
 
 def showtimes_snapshot_folderpath(run_id)-> str:
-    return showtimes_config.get('showtimes_snapshot_folderpath').format(run_id=run_id)
+    return showtimes_config.get('snapshot_folderpath').format(run_id=run_id)
 
 def showtimes_notebook_filepath() -> str:
     return Path(__file__).parent.joinpath('data_cleaning', 'showtimes.ipynb')

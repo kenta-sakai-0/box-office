@@ -2,11 +2,11 @@ import dagster as dg
 import asyncio
 import numpy as np
 from curl_cffi.requests import AsyncSession
-
 import uuid
 
 from box_office.resources.common.proxies import ProxyResource, ProxyClient, Proxy
 from box_office.resources.databricks.Databricks import DatabricksResource
+
 
 class RequestNode():
     def __init__(
@@ -16,7 +16,7 @@ class RequestNode():
         requestQ: asyncio.Queue,
         run_id: str,
         databricks: DatabricksResource,
-        context: dg.AssetExecutionContext,
+        context: dg.AssetExecutionContext
     ):
         self.nodeID = nodeID
         self.context = context
@@ -38,8 +38,8 @@ class RequestNode():
             self,
             maxRequestsFailedInRow: int,
             chunkSize: int,
-            timeout: int,
-            file_destination: str
+            file_destination: str,
+            cooldown_seconds: int=180
         ) -> bool:
         """
             Main job run for node. Requests a proxy and processes the page queue.
@@ -60,7 +60,7 @@ class RequestNode():
                     proxies={'http': self.proxy.url, 'https': self.proxy.url}
                 ) as session:
                     
-                    # Inner loop terminates when rotate_proxy is true, which means we need new proxy cuz old one died for whatever reason
+                    # Inner loop terminates when we need new proxy when old one died for whatever reason
                     while (not self.requestQ.empty()) and (not rotate_proxy):
                         try:
                             r = self.requestQ.get_nowait()
@@ -69,11 +69,10 @@ class RequestNode():
                         
                         try:
                             response = await session.get(**r)
-                            await asyncio.sleep(np.random.uniform(0.5, 1.5))
 
                             if response.status_code == 200:
-                                responses.append(response.json())
-                                self.context.log.info(f'NodeID: {self.nodeID} | OK | {response.status_code} | Request {r}')
+                                responses.append(response.content)
+                                # self.context.log.info(f'NodeID: {self.nodeID} | OK | {response.status_code} | Request {r} | {len(responses)}/{chunkSize}')
                                 numRequestsFailedInRow = 0
 
                             elif response.status_code in (403, 407):
@@ -81,6 +80,7 @@ class RequestNode():
                                     f'NodeID: {self.nodeID} | NOT OK | {response.status_code} | Request {r}'
                                 )
                                 proxy_blocked = True
+
                                 raise Exception
                             
                             else:
@@ -89,18 +89,19 @@ class RequestNode():
                         except Exception as e:
                             self.context.log.error(f'NodeID: {self.nodeID} | Request error | Request {r} | {e}')
                             numRequestsFailedInRow += 1
-                            await self.requestQ.put(r)
                         
                         if proxy_blocked or (numRequestsFailedInRow >= maxRequestsFailedInRow):
                             rotate_proxy = True
                             self.context.log.info(f"NodeID: {self.nodeID} | proxy_blocked: {proxy_blocked} | {numRequestsFailedInRow} requests failed in a row: {self.proxy.url}")
-                            await self.proxyClient.releaseBroken(self.proxy)
+                            await self.proxyClient.releaseBroken(self.proxy, cooldown_seconds=cooldown_seconds)
                         
                         # Flush to Databricks every chunkSize responses
                         if len(responses) > 0 and len(responses) % chunkSize == 0:
                             await self._flush(responses, file_destination)
                             responses = []
 
+                        await asyncio.sleep(np.random.uniform(0.75, 1.5))
+            
             # Flush any remaining responses after the queue is drained
             await self._flush(responses, file_destination)
 
@@ -112,8 +113,8 @@ class RequestNode():
         if not responses:
             return
         
-        await self.databricks.upload_dict_as_jsonl(
+        await self.databricks.upload_raw_jsonl(
             data=responses, 
-            targetPath=f'{file_destination}/{uuid.uuid4()}'
+            targetPath=f'{file_destination}/{uuid.uuid4()}.jsonl'
             )
         self.context.log.info(f'NodeID: {self.nodeID} | Flushed {len(responses)} pages to Databricks: {file_destination}')

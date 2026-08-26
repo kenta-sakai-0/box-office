@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 maxStrikes = 3
-cooldown = timedelta(minutes=5)
+
 
 
 class ProxyResource(dg.ConfigurableResource):
@@ -79,11 +79,11 @@ class ProxyClient:
         await self._proxyQ.put(p)
 
 
-    async def releaseBroken(self, p:Proxy) -> None:
+    async def releaseBroken(self, p:Proxy, cooldown_seconds) -> None:
         
         if p.strikes >= maxStrikes:
             return
         
-        p.released_at = datetime.now() + cooldown
+        p.released_at = datetime.now() + timedelta(seconds=cooldown_seconds)
         p.strikes += 1
         await self._brokenQ.put(p)

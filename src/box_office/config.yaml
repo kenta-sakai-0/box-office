@@ -8,21 +8,21 @@ theaters: &theaters
   theaters_snapshot_location: '/Volumes/{catalog}/landing/theaters/{run_id}.parquet'
 
 showtimes: &showtimes
-  showtimes_snapshot_folderpath: '/Volumes/fandango_dev/landing/showtimes/{run_id}'
+  snapshot_folderpath: '/Volumes/fandango_dev/landing/showtimes/{run_id}'
 
-  numNodes: 85 # Num nodes to run in parallel
+  numNodes: 75 # Num nodes to run in parallel
   chunkSize: 750 # Num pages to scrape before flushing to Databricks
   timeout: 10 # in seconds
   maxRequestsFailedInRow: 3 # number of requests allowed to fail in a row before declaring proxy dead and rotating
   nDaysFromToday: 30
 
 seatmaps: &seatmaps
-  seatmaps_snapshot_folderpath: '/Volumes/fandango_dev/landing/seatmaps/{run_id}'
+  snapshot_folderpath: '/Volumes/fandango_dev/landing/seatmaps/{run_id}'
  
   numNodes: 85 # Num nodes to run in parallel
-  chunkSize: 750 # Num pages to scrape before flushing to Databricks
-  timeout: 10 # in seconds
-  maxRequestsFailedInRow: 3 # number of requests allowed to fail in a row before declaring proxy dead and rotating
+  chunkSize: 750 # Num requests to make before flushing to Databricks
+  timeout: 5 # in seconds
+  maxRequestsFailedInRow: 50 # Matinee and GA requests will fail so setting this higher. If a node fails 50 requests in a row, somethings wrong
   nDaysFromToday: 30
 
 
