@@ -1,6 +1,9 @@
 common: &common
   catalog: catalog
-  
+
+proxies: &proxies
+  file_path: 'src/box_office/resources/common/Webshare 100 proxies.txt'
+
 franchises: &franchises
   franchises_snapshot_savepath: '/Volumes/{catalog}/landing/franchises/{run_id}.parquet'
 
@@ -27,7 +30,9 @@ seatmaps: &seatmaps
 
 
 default: &default
-  <<: *common 
+  <<: *common
+  proxies:
+    <<: *proxies
   franchises:
     <<: *franchises
   theaters:
