@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import polars as pl
 from datetime import datetime, timezone
 from box_office.resources.databricks.Databricks import DatabricksResource
+from box_office.defs.proxies.proxies import proxy_refresh
 import yaml
 import os
 from importlib.resources import files
@@ -18,7 +19,7 @@ with open(config_path, 'r') as file:
 catalog = config.get('catalog')
 franchises_config = config.get('franchises')
 
-@dg.asset
+@dg.asset(deps=[proxy_refresh])
 async def franchises_snapshot(context, databricks: DatabricksResource) -> str:
     """
         Takes snapshot of https://www.fandango.com/movie-theaters and make it available as flat file

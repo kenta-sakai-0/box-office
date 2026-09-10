@@ -12,7 +12,6 @@ pipeline_schedule = dg.ScheduleDefinition(
     execution_timezone="America/Los_Angeles",
 )
 
-
 @dg.definitions
 def schedules():
     return dg.Definitions(
