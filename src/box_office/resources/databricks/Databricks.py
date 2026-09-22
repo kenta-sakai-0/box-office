@@ -1,5 +1,6 @@
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import sql
+from databricks.sdk.errors import BadRequest
 from pydantic import PrivateAttr
 import pyarrow as pa
 import requests
@@ -66,21 +67,31 @@ class DatabricksResource(dg.ConfigurableResource):
             buffer.seek(0)
             await self.upload(buffer, targetPath, overwrite)
     
-    def submit_query(self, query: str, warehouse_id: str = 'dd367767ecda1b31'):
-        try:
-            result = self._w.statement_execution.execute_statement(
-                warehouse_id=warehouse_id,
-                statement=query,
-                wait_timeout="50s",
-                disposition=sql.Disposition.EXTERNAL_LINKS,
-                format=sql.Format.ARROW_STREAM
-            )
-            print(result.status.state)
-            if result.status.state != sql.StatementState.SUCCEEDED:
-                raise Exception(f"Query failed with state {result.status.state}: {result.status.error.message}\n{query}")
-            return result
-        except Exception as e:
-            raise Exception(f"Query failed: {e}\n{query}") from e
+    def submit_query(self, query: str, warehouse_id: str = 'dd367767ecda1b31', max_attempts: int = 5):
+        for attempt in range(1, max_attempts + 1):
+            try:
+                result = self._w.statement_execution.execute_statement(
+                    warehouse_id=warehouse_id,
+                    statement=query,
+                    wait_timeout="50s",
+                    disposition=sql.Disposition.EXTERNAL_LINKS,
+                    format=sql.Format.ARROW_STREAM
+                )
+                print(result.status.state)
+                if result.status.state != sql.StatementState.SUCCEEDED:
+                    raise Exception(f"Query failed with state {result.status.state}: {result.status.error.message}\n{query}")
+                return result
+            except BadRequest as e:
+                if attempt < max_attempts:
+                    backoff = 15 * attempt
+                    self._logger.warning(
+                        f"Databricks | submit_query rejected by warehouse (likely still starting up), attempt {attempt}/{max_attempts}: {e} | Retrying in {backoff}s"
+                    )
+                    time.sleep(backoff)
+                    continue
+                raise Exception(f"Query failed: {e}\n{query}") from e
+            except Exception as e:
+                raise Exception(f"Query failed: {e}\n{query}") from e
     
     def query(self, query: str, warehouse_id: str = 'dd367767ecda1b31') -> pl.DataFrame:
         self._logger.info(f"Databricks | Submitting query")

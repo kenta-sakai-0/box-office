@@ -98,7 +98,7 @@ def fetch_showtimes_df(databricks) -> pl.DataFrame:
         from {catalog}.base.showtimes st
         left join {catalog}.base.theaters t
             on lower(st.theater_id) = lower(t.theater_id)
-        where st.ticketingDate between to_date(to_utc_timestamp(current_timestamp(), 'America/Los_Angeles')) and to_date(to_utc_timestamp(current_timestamp() + interval 30 days, 'America/Los_Angeles'))
+        where st.ticketingDate between to_date(to_utc_timestamp(current_timestamp(), 'America/Los_Angeles')) and to_date(to_utc_timestamp(current_timestamp() + interval 7 days, 'America/Los_Angeles'))
     """
     return databricks.query(q)
 
