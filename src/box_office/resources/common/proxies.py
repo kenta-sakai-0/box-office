@@ -1,14 +1,24 @@
 import dagster as dg
 import asyncio
+import os
+import yaml
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from importlib.resources import files
 
 maxStrikes = 3
 
+env = os.getenv("DAGSTER_ENV")
+
+config_path = files("box_office") / "config.yaml"
+with open(config_path, 'r') as file:
+    config = yaml.safe_load(file).get(env)
+
+WEBSHARE_PROXIES_FILE_PATH = config.get('proxies').get('file_path')
 
 
 class ProxyResource(dg.ConfigurableResource):
-    file_path: str = 'src/box_office/resources/common/Webshare 100 proxies.txt'
+    file_path: str = WEBSHARE_PROXIES_FILE_PATH
 
     def create_resource(self, context: dg.InitResourceContext) -> 'ProxyClient':
         return ProxyClient(self.file_path, context)
