@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.databricks.com)",
+      "Read(//home/ken/Downloads/**)",
+      "Bash(timeout 300 .venv/bin/python /tmp/claude-1000/-home-ken-projects-box-office/fc1a6c3b-592b-429c-86f1-8d1e860f10e1/scratchpad/diag2.py)"
     ]
   }
 }
